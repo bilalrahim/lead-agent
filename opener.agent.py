@@ -1,126 +1,136 @@
 import pandas as pd
-# from langchain_openai import OpenAI
 from langchain.prompts.prompt import PromptTemplate
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-
-# For prompt engineering.
-tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-base")
-model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-base")
-
-openai_api_key = "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"
+from dotenv import load_dotenv
+load_dotenv()
+from services.LLM.getAnswerUsingCohere import getAnswerUsingCohere
+from modules.savePromptAsMarkdown import savePromptAsMarkdown
 
 input_csv = "leads.csv"
-prompt_output_file = "prompts.txt"
+prompt_output_file = "prompts.md"
 email_output_csv = "opener_output.csv"
 
-# Function to extract key information from lead data using T5.
-def extract_lead_info(lead_data):
-    print(f'Extracting information from lead data: {lead_data}')
-    prompt_industry = f"Extract the industry from the lead data: {lead_data}"
-    prompt_needs = f"Extract the needs of the company from the lead data: {lead_data}"
 
-    try:
-        # Extract information using T5.
-        extracted_info = {
-            "industry": extract_from_t5(model, tokenizer, prompt_industry),
-            "needs": extract_from_t5(model, tokenizer, prompt_needs)
-        }
-        print("Extracted info:", extracted_info)
-        return extracted_info
-    except Exception as e:
-        print(f"Error extracting information: {e}")
-        return None
+def generate_email_subject_prompt(lead_info):
+    """
+    Generate a prompt for the email subject.
 
-def extract_from_t5(model, tokenizer, prompt):
-    try:
-        inputs = tokenizer(prompt, return_tensors="pt", max_length=512, truncation=True)
-        outputs = model(**inputs, decoder_input_ids=inputs["input_ids"])
-        decoded_output = tokenizer.decode(outputs['logits'].argmax(dim=-1).squeeze().tolist(), skip_special_tokens=True)
-        return decoded_output
-    except Exception as e:
-        print(f"Error during T5 extraction: {e}")
-        raise
+    Parameters:
+    - lead_info (dict): Dictionary containing lead information.
 
-# Function to generate a personalized prompt based on extracted information
-def generate_prompt(lead_info):
+    Returns:
+    str: Email subject prompt.
+    """
+    template = """ 
+            Output a subject for a cold email no more than 30 characters to {lead_name} 
+            of {company_name} from Antematter {antematter_description} who are looking for a Software Consultancy Provider.
+            In the output only give me the subject nothing else.
+            """
+
+    prompt_template = PromptTemplate(
+        template=template,
+        input_variables=[
+            "lead_name",
+            "company_name",
+            "antematter_description",
+        ])
+
+    return prompt_template.format(lead_name=lead_info["lead_name"], company_name=lead_info["company_name"],
+                                  antematter_description=lead_info["antematter_description"])
+
+
+def generate_email_body_prompt(lead_info):
+    """
+    Generate a prompt for the email body.
+
+    Parameters:
+    - lead_info (dict): Dictionary containing lead information.
+
+    Returns:
+    str: Email body prompt.
+    """
     template = """
-            Antematter is a software consultancy provider that specializes 
-            in helping businesses optimize their digital operations and achieve their goals.
-            {antematter_description}
-            Write a cold email introducing Antematter 
-            to {lead_name}, of {company_name}, a {industry} company with {company_size} employees, 
-            and inquire about their potential need for {needs}. 
-            Please keep the tone professional and engaging.
+            Write a cold email to {lead_name} of {company_name} who are looking for a Software Consultancy Provider for
+            the following reasons {looking_for}. The email is to introduce Antematter which is {antematter_description}. 
+            Inquire about {company_name} potential scope and budget.
+            
+            The output email should have the following format:
+            - Introduction
+            - Antematter's value proposition
+            - Asking for more information regarding the scope and budget
           """
     prompt_template = PromptTemplate(
-        template = template,
-        input_variables = [
+        template=template,
+        input_variables=[
             "antematter_description",
             "lead_name",
             "company_name",
-            "industry",
-            "company_size",
-            "needs"
-            ]
-    )
+            "looking_for"
+        ])
 
-    return prompt_template.format(antematter_description=lead_info["antematter_description"], 
-                           lead_name=lead_info["lead_name"], company_name=lead_info["company_name"], 
-                           industry=lead_info["industry"], company_size=lead_info["company_size"], 
-                           needs=lead_info["needs"])
-def generate_opener_email(prompt):
-    llm = OpenAI(temperature=0.7, openai_api_key=openai_api_key)
+    return prompt_template.format(antematter_description=lead_info["antematter_description"],
+                                  lead_name=lead_info["lead_name"], company_name=lead_info["company_name"],
+                                  looking_for=lead_info["looking_for"])
 
+
+def generate_opener_email(subject_prompt, email_prompt, temperature):
+    """
+    Generate email content using subject and body prompts.
+
+    Parameters:
+    - subject_prompt (str): Prompt for the email subject.
+    - email_prompt (str): Prompt for the email body.
+    - temperature (float): Temperature parameter for text generation.
+
+    Returns:
+    tuple: Tuple containing generated subject and body.
+    """
     try:
-        # Generate email subject (limited to 30 characters)
-        response = llm(prompt + " Subject:", max_tokens=30)  # Limit response length
-        subject = response.strip().capitalize()
-
-        # Generate email body (limited to 150 tokens, approximately 3 paragraphs)
-        response = llm(prompt + "\n\nBody:", max_tokens=150)
-        body = response.strip()
-
-        return subject, body
+        cohereSubject = getAnswerUsingCohere(subject_prompt, max_tokens=30, temperature=temperature)
+        cohereEmail = getAnswerUsingCohere(email_prompt, max_tokens=400, temperature=temperature)
+        return cohereSubject, cohereEmail
     except Exception as e:
-        print(f"Error during T5 extraction: {e}")
-        raise
+        print(f"Error generating opener email: {e}")
+        return None, None
+
 
 def process_opener_agent():
+    """
+    Process the opener agent for each lead in the input CSV file.
+    """
     output_data = []
-    df = pd.read_csv(input_csv)
-    for index, row in df.iterrows():
-        print(f"Processing lead {index + 1} of {len(df)}")
-        lead = row.to_dict()
+    temperature = 0.2
+    try:
+        df = pd.read_csv(input_csv)
+        for index, row in df.iterrows():
+            print(f"Processing lead {index + 1} of {len(df)}")
+            lead = row.to_dict()
 
-        # Extract lead information.
-        try:
-            lead_requirements = extract_lead_info(lead['Looking For'])
-        except KeyError:
-            print(f"Missing information in lead: {lead['Name']}")
-            continue
+            prompt_info = {
+                "looking_for": lead['Looking For'],
+                "antematter_description": "is a Software firm that develops and improves cutting-edge solutions using Blockchain & AI with one guarantee: maximum performance, in every sense of the word.",
+                "lead_name": lead['Name'],
+                "company_name": lead['Organizaton'],
+                "company_size": lead['Company Size'],
+            }
 
-        # Generate Personalized Prompt.
-        print(f"Generating prompt for {lead['Name']}")
-        prompt_info = {
-            **lead_requirements,
-            "antematter_description": "Antematter develops and improves cutting-edge solutions using Blockchain & AI with one guarantee: maximum performance, in every sense of the word.",
-            "lead_name": lead['Name'],
-            "company_name": lead['Organizaton'],
-            "company_size": lead['Company Size'],
-        }
-        prompt = generate_prompt(prompt_info)
+            subject_prompt = generate_email_subject_prompt(prompt_info)
+            email_prompt = generate_email_body_prompt(prompt_info)
 
-        # Save prompt to a file.
-        with open(prompt_output_file, "w") as f:
-            f.write(prompt)
-        subject, body = generate_opener_email(prompt)
+            savePromptAsMarkdown([subject_prompt, email_prompt], prompt_output_file)
 
-        output_data.append({
-            "Email Subject": subject,
-            "Email Body": body,
-        })
+            subject, body = generate_opener_email(subject_prompt, email_prompt, temperature)
 
-    # Save generated emails to CSV
-    pd.DataFrame(output_data).to_csv(email_output_csv, index=False)
+            if subject is not None and body is not None:
+                output_data.append({
+                    "Email Subject": subject,
+                    "Email Body": body,
+                })
 
-process_opener_agent()
+        # Save generated emails to CSV
+        pd.DataFrame(output_data).to_csv(email_output_csv, index=False)
+    except Exception as e:
+        print(f"Error processing opener agent: {e}")
+
+
+if __name__ == "__main__":
+    process_opener_agent()
