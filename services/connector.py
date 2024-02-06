@@ -69,7 +69,7 @@ def is_requesting_more_information(response):
     """
     question = "Does the following contain a request to schedule a call or need more information?"
     prompt = generate_extraction_prompt(response, question)
-    return extract_information(prompt)
+    return extract_information(prompt), prompt
 
 
 def does_contain_budget(response):
@@ -84,7 +84,7 @@ def does_contain_budget(response):
     """
     question = "Does the following contain information about the budget of the project, and should I send a response asking about the budget?"
     prompt = generate_extraction_prompt(response, question)
-    return extract_information(prompt)
+    return extract_information(prompt), prompt
 
 
 def does_contain_scope(response):
@@ -99,5 +99,5 @@ def does_contain_scope(response):
     """
     question = "Does the following contain information about the scope of the project?"
     prompt = generate_extraction_prompt(response, question)
-    return extract_information(prompt)
+    return extract_information(prompt), prompt
     

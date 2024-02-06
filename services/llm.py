@@ -18,34 +18,30 @@ def extractInformationUsingCohere(prompt):
     Returns:
     str: Extracted information content.
     """
-    print(f'Extracting information using Cohere with prompt: {prompt}')
     cohere_chat_model = ChatCohere(cohere_api_key=COHERE_API_KEY)
     current_message = [HumanMessage(content=prompt)]
     response = cohere_chat_model(current_message)
     
-    print(f"Response: {response.content.rstrip('.')}")
     return response.content.rstrip('.')
 
 def getAnswerUsingCohere(prompt, max_tokens, temperature):
     """
-    Generate an opener using Cohere model with the given prompt.
+    Generate text using Cohere model with the given prompt.
 
     Parameters:
-    - prompt (str): Prompt for generating opener.
+    - prompt (str): Prompt for generating txt.
     - max_tokens (int): Maximum number of tokens in the generated text.
     - temperature (float): Temperature parameter for text generation.
 
     Returns:
-    str: Generated opener text.
+    str: Generated text.
     """
     try:
-        print(f'Generating opener using Cohere with prompt: {prompt}')
         llm = Cohere(model="command", cohere_api_key=COHERE_API_KEY, temperature=temperature, max_tokens=max_tokens)
         output = llm.invoke(prompt)
-        print(f'Generated opener using Cohere: {output}')
         return output
     except Exception as e:
-        print(f"Error generating opener using Cohere: {e}")
+        print(f"Error generating text using Cohere: {e}")
         return None
     
 
@@ -54,7 +50,7 @@ def generateResponseUsingOpenAI(prompt):
     Generate using OpenAI model with the given prompt.
 
     Parameters:
-    - prompt (str): Prompt for generating opener.
+    - prompt (str): Prompt for generating text.
 
     Returns:
     tuple: Tuple containing generated email subject and body.

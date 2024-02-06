@@ -1,4 +1,4 @@
-def savePromptAsMarkdown(prompts, file_path):
+def savePromptAsMarkdown(prompts, file_path, lead_index):
     """
     Save prompts to a markdown file.
 
@@ -10,7 +10,8 @@ def savePromptAsMarkdown(prompts, file_path):
     None
     """
     try:
-        with open(file_path, "a") as f:  # Use 'a' for append mode
+        with open(file_path, "a") as f:
+            f.write(f"### Lead {lead_index}\n")
             for prompt in prompts:
                 # Add markdown bullet points for each prompt
                 f.write(f"- {prompt}\n")
