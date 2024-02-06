@@ -22,7 +22,7 @@ The Escalator Agent, on the other hand, functions as a responsive mechanism post
 ### Python Version: 3.10.9
 1. Install required packages using the `requirements.txt` file.
 2. Add your Cohere API key to the `.env` file.
-3. Run the following commands in your terminal:
+3. Run the following commands in your terminal (please wait for the execution of the first cmd):
    ```bash
    python opener.agent.py
    python escalator.agent.py
