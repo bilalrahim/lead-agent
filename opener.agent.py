@@ -5,9 +5,9 @@ from modules.savePromptAsMarkdown import savePromptAsMarkdown
 from services.prompts import generate_email_subject_prompt, generate_email_body_prompt
 from services.connector import generate_opener_email
 
-input_csv = "leads.csv"
-prompt_output_file = "prompts.md"
-email_output_csv = "opener_output.csv"
+INPUT_CSV = "leads.csv"
+PROMPT_OUTPUT_FILE = "prompts.md"
+EMAIL_OUTPUT_CSV = "opener_output.csv"
 
 def process_opener_agent():
     """
@@ -16,7 +16,7 @@ def process_opener_agent():
     output_data = []
     temperature = 0.2
     try:
-        df = pd.read_csv(input_csv)
+        df = pd.read_csv(INPUT_CSV)
         for index, row in df.iterrows():
             print(f"Processing lead {index + 1} of {len(df)}")
             lead = row.to_dict()
@@ -32,7 +32,7 @@ def process_opener_agent():
             subject_prompt = generate_email_subject_prompt(prompt_info)
             email_prompt = generate_email_body_prompt(prompt_info)
 
-            savePromptAsMarkdown([subject_prompt, email_prompt], prompt_output_file)
+            savePromptAsMarkdown([subject_prompt, email_prompt], PROMPT_OUTPUT_FILE)
 
             subject, body = generate_opener_email(subject_prompt, email_prompt, temperature)
 
@@ -43,7 +43,7 @@ def process_opener_agent():
                 })
 
         # Save generated emails to CSV
-        pd.DataFrame(output_data).to_csv(email_output_csv, index=False)
+        pd.DataFrame(output_data).to_csv(EMAIL_OUTPUT_CSV, index=False)
     except Exception as e:
         print(f"Error processing opener agent: {e}")
 
