@@ -86,7 +86,7 @@ def process_escalator_agent():
         # Save generated emails to CSV
         pd.DataFrame(output_data).to_csv(RESPONSE_OUTPUT_CSV, index=False)
     except Exception as e:
-        logger.error(f"Error processing escalater agent: {e}\n{traceback.format_exc()}")
+        logger.error(f"Error processing escalator agent: {e}\n{traceback.format_exc()}")
 
 if __name__ == "__main__":
     process_escalator_agent()
