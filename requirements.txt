@@ -1,0 +1,9 @@
+cohere==4.45
+confluent-kafka==2.3.0
+langchain==0.1.5
+langchain-community==0.0.17
+langchain-core==0.1.18
+langchain-openai==0.0.5
+langsmith==0.0.86
+pandas==2.0.3
+python-dotenv==1.0.1
